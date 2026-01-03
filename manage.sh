@@ -18,6 +18,29 @@ for var in $(grep "^AP_" "$CONFIG_FILE" | cut -d= -f1); do
     ALL_APS="$ALL_APS $ip"
 done
 
+# Git commit helper for data directory
+git_commit_data() {
+    local message="$1"
+    cd "./data" || return
+    
+    # Initialize git if not already done
+    if [ ! -d ".git" ]; then
+        git init
+        git config user.name "AP Config Manager"
+        git config user.email "ap-config@local"
+    fi
+    
+    # Add and commit changes
+    git add -A
+    if git diff --cached --quiet; then
+        echo "No changes to commit"
+    else
+        git commit -m "$message"
+        echo "Changes committed to local git"
+    fi
+    cd ..
+}
+
 download_configs() {
     local selected_aps="${1:-$ALL_APS}"
     for AP in $selected_aps; do
@@ -27,15 +50,25 @@ download_configs() {
         scp -rO root@$AP:/etc/config/* "./data/$AP_NAME/"
         sleep 5
     done
+    
+    # Commit changes to git
+    git_commit_data "Downloaded configs from: $(echo $selected_aps | tr ' ' ',')"
 }
 
 upload_configs() {
     local selected_aps="${1:-$ALL_APS}"
+    
+    # Commit current state before upload
+    git_commit_data "Before upload to: $(echo $selected_aps | tr ' ' ',')"
+    
     for AP in $selected_aps; do
         AP_NAME=$(grep "^AP_.*=$AP" "$CONFIG_FILE" | cut -d= -f1 | sed 's/AP_//')
         scp -rO ./data/$AP_NAME/* root@$AP:/etc/config/
         sleep 1
     done
+    
+    # Commit after successful upload
+    git_commit_data "Uploaded configs to: $(echo $selected_aps | tr ' ' ',')"
 }
 
 reload_configs() {
