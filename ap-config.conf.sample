@@ -1,0 +1,8 @@
+# AP Configuration
+# Copy this file to ap-config.conf and customize with your AP names and IP addresses
+# Format: AP_NAME=IP_ADDRESS
+
+AP_KITCHEN=10.0.1.10
+AP_BEDROOM=10.0.1.11
+AP_OFFICE=10.0.1.12
+AP_LIVING=10.0.1.13
