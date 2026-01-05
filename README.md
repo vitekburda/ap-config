@@ -8,7 +8,10 @@ A simple bash script for managing configurations across multiple OpenWrt/LEDE ac
 - **Upload Configs** - Deploy configurations from `./data/` subdirectories to selected APs
 - **Reload Configs** - Remotely reload configurations on APs after upload
 - **SSH Key Setup** - Automated passwordless SSH authentication setup for new APs
+- **Startup Script Management** - Download, upload, and execute startup scripts (rc.local and custom init scripts)
+- **Reboot Control** - Remotely reboot selected APs with confirmation
 - **Interactive Selection** - Choose which APs to operate on with a dialog checkbox menu
+- **Git Version Control** - Automatic git commits for tracking configuration changes
 - **Configuration File** - Keep your network configuration separate from the code
 
 ## Prerequisites
@@ -49,24 +52,33 @@ Run the script:
 1. **Download configs** - Backs up `/etc/config/*` from selected APs to `./data/<AP_NAME>/` folders
 2. **Upload configs** - Uploads configs from `./data/<AP_NAME>/` to selected APs and optionally reloads them
 3. **Setup SSH keys** - Sets up passwordless authentication for selected APs
+4. **Download startup scripts** - Backs up `/etc/rc.local` and `/etc/init.d/custom_*` scripts to `./data/<AP_NAME>/etc/`
+5. **Upload startup scripts** - Uploads startup scripts from `./data/<AP_NAME>/etc/` and optionally executes them
+6. **Execute startup scripts** - Manually execute startup scripts on selected APs without uploading
+7. **Reboot selected APs** - Remotely reboot selected APs with confirmation dialog
 
 ### Directory Structure
 
-After downloading, configs are stored in the `data/` directory (git-ignored):
+After downloading, configs and startup scripts are stored in the `data/` directory with automatic git versioning:
 ```
 ap-config/
 ├── manage.sh
 ├── ap-config.conf
 ├── ap-config.conf.sample
 └── data/
+    ├── .git/                    # Automatic version control
     ├── KITCHEN/
-    │   └── config files...
+    │   └── etc/
+    │       ├── config/          # OpenWrt config files
+    │       ├── rc.local         # Startup script
+    │       └── init.d/
+    │           └── custom_*     # Custom init scripts
     ├── BEDROOM/
-    │   └── config files...
+    │   └── etc/
     ├── OFFICE/
-    │   └── config files...
+    │   └── etc/
     └── LIVING/
-        └── config files...
+        └── etc/
 ```
 
 ## First Time Setup
@@ -100,6 +112,50 @@ After this, all operations will be passwordless.
 5. Select the new AP
 6. Enter password once to setup passwordless auth
 
+## Startup Script Management
+
+The script supports managing custom startup scripts on your APs:
+
+### Supported Script Types
+- **rc.local** - Traditional init script at `/etc/rc.local`
+- **Custom init scripts** - Scripts matching `/etc/init.d/custom_*` pattern
+
+### Managing Startup Scripts
+
+**Download existing scripts:**
+```bash
+./manage.sh → 4 - Download startup scripts
+```
+
+**Create/edit scripts locally:**
+```bash
+# Edit or create scripts in ./data/<AP_NAME>/etc/
+nano ./data/KITCHEN/etc/rc.local
+nano ./data/KITCHEN/etc/init.d/custom_firewall
+```
+
+**Upload to APs:**
+```bash
+./manage.sh → 5 - Upload startup scripts
+```
+
+Scripts are automatically:
+- Made executable (`chmod +x`)
+- Enabled as init services (for `/etc/init.d/custom_*`)
+- Optionally executed immediately after upload
+
+**Test execution:**
+```bash
+./manage.sh → 6 - Execute startup scripts
+```
+
+## Git Version Control
+
+All configuration and startup script changes are automatically tracked:
+- Downloads create commits like "Downloaded configs from: AP1,AP2"
+- Uploads create commits like "Uploaded startup scripts to: AP1"
+- Local git repository in `./data/.git/` for version history
+
 ## Configuration
 
 The script uses `ap-config.conf` for AP definitions. Add or remove APs as needed:
@@ -112,7 +168,14 @@ AP_OFFICE=192.168.1.50
 # Add more APs as needed
 ```
 
-The `ap-config.conf` file is git-ignored to keep your personal network configuration private. Similarly, the `data/` directory containing your downloaded configurations is also git-ignored.
+The `ap-config.conf` file is git-ignored to keep your personal network configuration private.
+
+## Safety Features
+
+- **Confirmation dialogs** for destructive operations (upload, reboot)
+- **Git versioning** tracks all changes with automatic commits
+- **AP selection** prevents accidental operations on wrong devices
+- **Background reboot** prevents SSH session hangs during reboot
 
 ## Requirements
 
